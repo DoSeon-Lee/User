@@ -24,7 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
       register: document.getElementById("register-section"),
       login: document.getElementById("login-section"),
       profile: document.getElementById("profile-section"),
-      password: document.getElementById("password-section"),
+      editProfile: document.getElementById("edit-profile-section"),
+      password: document.getElementById("change-password-section"),
       users: document.getElementById("users-section"),
     },
     nav: {
@@ -38,8 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
     forms: {
       register: document.getElementById("register-form"),
       login: document.getElementById("login-form"),
-      profile: document.getElementById("profile-form"),
-      password: document.getElementById("password-form"),
+      editProfile: document.getElementById("edit-profile-form"),
+      changePassword: document.getElementById("change-password-form"),
       avatar: document.getElementById("avatar-form"),
     },
     themeToggle: document.getElementById("theme-toggle"),
@@ -70,13 +71,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function showSection(sectionId) {
     // 모든 섹션 숨기기
     Object.values(ui.sections).forEach((section) => {
-      if (section) section.style.display = "none";
+      if (section) section.classList.add("hidden");
     });
 
     // 선택한 섹션 표시
     if (ui.sections[sectionId]) {
-      ui.sections[sectionId].style.display = "block";
-      state.currentSection = `${sectionId}-section`;
+      ui.sections[sectionId].classList.remove("hidden");
+      state.currentSection = sectionId;
     }
 
     // 현재 섹션에 따라 추가 작업
@@ -91,43 +92,66 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateNavigation() {
     // 로그인 상태에 따라 메뉴 표시/숨김
     if (state.isLoggedIn) {
-      if (ui.nav.register) ui.nav.register.style.display = "none";
-      if (ui.nav.login) ui.nav.login.style.display = "none";
-      if (ui.nav.profile) ui.nav.profile.style.display = "block";
-      if (ui.nav.logout) ui.nav.logout.style.display = "block";
-      if (ui.nav.users) ui.nav.users.style.display = "block";
+      if (ui.nav.register) ui.nav.register.classList.add("hidden");
+      if (ui.nav.login) ui.nav.login.classList.add("hidden");
+      if (ui.nav.profile) ui.nav.profile.classList.remove("hidden");
+      if (ui.nav.logout) ui.nav.logout.classList.remove("hidden");
+      if (ui.nav.users) ui.nav.users.classList.remove("hidden");
     } else {
-      if (ui.nav.register) ui.nav.register.style.display = "block";
-      if (ui.nav.login) ui.nav.login.style.display = "block";
-      if (ui.nav.profile) ui.nav.profile.style.display = "none";
-      if (ui.nav.logout) ui.nav.logout.style.display = "none";
-      if (ui.nav.users) ui.nav.users.style.display = "none";
+      if (ui.nav.register) ui.nav.register.classList.remove("hidden");
+      if (ui.nav.login) ui.nav.login.classList.remove("hidden");
+      if (ui.nav.profile) ui.nav.profile.classList.add("hidden");
+      if (ui.nav.logout) ui.nav.logout.classList.add("hidden");
+      if (ui.nav.users) ui.nav.users.classList.add("hidden");
 
       // 로그인 되지 않은 상태에서 로그인이 필요한 섹션이면 홈으로 리다이렉트
       if (
-        state.currentSection === "profile-section" ||
-        state.currentSection === "password-section" ||
-        state.currentSection === "users-section"
+        state.currentSection === "profile" ||
+        state.currentSection === "editProfile" ||
+        state.currentSection === "password" ||
+        state.currentSection === "users"
       ) {
         showSection("home");
       }
+    }
+
+    // 활성 네비게이션 표시
+    const navLinks = document.querySelectorAll("#main-nav a");
+    navLinks.forEach((link) => {
+      link.classList.remove("active");
+    });
+
+    if (state.currentSection === "home") {
+      ui.nav.home.classList.add("active");
+    } else if (state.currentSection === "register") {
+      ui.nav.register.classList.add("active");
+    } else if (state.currentSection === "login") {
+      ui.nav.login.classList.add("active");
+    } else if (
+      state.currentSection === "profile" ||
+      state.currentSection === "editProfile"
+    ) {
+      ui.nav.profile.classList.add("active");
+    } else if (state.currentSection === "users") {
+      ui.nav.users.classList.add("active");
     }
   }
 
   // 메시지 표시 함수 (추가된 타입별 스타일)
   function showMessage(message, type = "info") {
-    const messageContainer = ui.messageContainer;
+    const messageContainer = document.getElementById("message-container");
+    const messageContent = document.getElementById("message-content");
 
-    if (!messageContainer) return;
+    if (!messageContainer || !messageContent) return;
 
-    messageContainer.textContent = message;
+    messageContent.textContent = message;
     messageContainer.className = "message-container";
     messageContainer.classList.add(`message-${type}`);
-    messageContainer.style.display = "block";
+    messageContainer.classList.remove("hidden");
 
     // 5초 후 메시지 자동 제거
     setTimeout(() => {
-      messageContainer.style.display = "none";
+      messageContainer.classList.add("hidden");
     }, 5000);
   }
 
@@ -151,21 +175,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 프로필 양식 채우기
   function fillProfileForm() {
-    if (!state.user || !ui.forms.profile) return;
+    if (!state.user) return;
 
-    document.getElementById("profile-username").textContent =
-      state.user.username || "";
-    document.getElementById("profile-email").value = state.user.email || "";
-    document.getElementById("profile-fullname").value =
-      state.user.full_name || "";
+    // 프로필 섹션 데이터
+    const profileUsername = document.getElementById("profile-username");
+    const profileEmail = document.getElementById("profile-email");
+    const profileFullname = document.getElementById("profile-fullname");
+    const profileCreated = document.getElementById("profile-created");
+    const profileAvatar = document.getElementById("profile-avatar");
 
-    // 아바타 미리보기 갱신
-    if (ui.avatarPreview) {
+    if (profileUsername)
+      profileUsername.textContent = state.user.username || "";
+    if (profileEmail) profileEmail.textContent = state.user.email || "";
+    if (profileFullname)
+      profileFullname.textContent = state.user.full_name || "";
+    if (profileCreated && state.user.created_at) {
+      const createdDate = new Date(state.user.created_at);
+      profileCreated.textContent = createdDate.toLocaleDateString();
+    }
+
+    // 프로필 편집 폼 데이터
+    const editEmail = document.getElementById("edit-email");
+    const editFullname = document.getElementById("edit-fullname");
+
+    if (editEmail) editEmail.value = state.user.email || "";
+    if (editFullname) editFullname.value = state.user.full_name || "";
+
+    // 아바타 설정
+    if (profileAvatar) {
       if (state.user.avatar_url) {
-        ui.avatarPreview.src = state.user.avatar_url;
+        profileAvatar.innerHTML = `<img src="${state.user.avatar_url}" alt="${state.user.username}" />`;
       } else {
-        ui.avatarPreview.src =
-          "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+        profileAvatar.innerHTML = `<i class="fas fa-user"></i>`;
       }
     }
   }
@@ -328,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (result.success) {
       showMessage("Password changed successfully.", "success");
-      ui.forms.password.reset();
+      ui.forms.changePassword.reset();
     } else {
       showMessage(result.error, "error");
     }
@@ -453,6 +494,36 @@ document.addEventListener("DOMContentLoaded", () => {
       ui.themeToggle.addEventListener("click", toggleTheme);
     }
 
+    // 메인 페이지 버튼
+    const homeRegisterBtn = document.getElementById("home-register-btn");
+    const homeLoginBtn = document.getElementById("home-login-btn");
+
+    if (homeRegisterBtn) {
+      homeRegisterBtn.addEventListener("click", () => showSection("register"));
+    }
+
+    if (homeLoginBtn) {
+      homeLoginBtn.addEventListener("click", () => showSection("login"));
+    }
+
+    // 폼 간 네비게이션
+    const registerToLogin = document.getElementById("register-to-login");
+    const loginToRegister = document.getElementById("login-to-register");
+
+    if (registerToLogin) {
+      registerToLogin.addEventListener("click", (e) => {
+        e.preventDefault();
+        showSection("login");
+      });
+    }
+
+    if (loginToRegister) {
+      loginToRegister.addEventListener("click", (e) => {
+        e.preventDefault();
+        showSection("register");
+      });
+    }
+
     // 네비게이션 리스너
     if (ui.nav.home) {
       ui.nav.home.addEventListener("click", () => showSection("home"));
@@ -507,37 +578,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const username = document.getElementById("login-username").value;
         const password = document.getElementById("login-password").value;
-        const rememberMe = document.getElementById("login-remember").checked;
+        const rememberMe = document.getElementById("remember-me").checked;
 
         loginUser({ username, password, remember_me: rememberMe });
       });
     }
 
     // 프로필 폼 제출
-    if (ui.forms.profile) {
-      ui.forms.profile.addEventListener("submit", (e) => {
+    if (ui.forms.editProfile) {
+      ui.forms.editProfile.addEventListener("submit", (e) => {
         e.preventDefault();
 
-        const email = document.getElementById("profile-email").value;
-        const fullName = document.getElementById("profile-fullname").value;
+        const email = document.getElementById("edit-email").value;
+        const fullName = document.getElementById("edit-fullname").value;
 
         updateProfile({ email, full_name: fullName });
       });
-
-      // 비밀번호 변경 링크
-      const changePasswordLink = document.getElementById(
-        "change-password-link"
-      );
-      if (changePasswordLink) {
-        changePasswordLink.addEventListener("click", () =>
-          showSection("password")
-        );
-      }
     }
 
     // 비밀번호 변경 폼 제출
-    if (ui.forms.password) {
-      ui.forms.password.addEventListener("submit", (e) => {
+    if (ui.forms.changePassword) {
+      ui.forms.changePassword.addEventListener("submit", (e) => {
         e.preventDefault();
 
         const currentPassword =
@@ -610,6 +671,50 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 500);
       });
     }
+
+    // 프로필 관련 버튼
+    const editProfileBtn = document.getElementById("edit-profile-btn");
+    const changePasswordBtn = document.getElementById("change-password-btn");
+    const cancelEditBtn = document.getElementById("cancel-edit-btn");
+    const cancelPasswordBtn = document.getElementById("cancel-password-btn");
+
+    if (editProfileBtn) {
+      editProfileBtn.addEventListener("click", () =>
+        showSection("editProfile")
+      );
+    }
+
+    if (changePasswordBtn) {
+      changePasswordBtn.addEventListener("click", () =>
+        showSection("password")
+      );
+    }
+
+    if (cancelEditBtn) {
+      cancelEditBtn.addEventListener("click", () => showSection("profile"));
+    }
+
+    if (cancelPasswordBtn) {
+      cancelPasswordBtn.addEventListener("click", () => showSection("profile"));
+    }
+
+    // 비밀번호 표시 토글 버튼
+    const togglePasswordButtons = document.querySelectorAll(".toggle-password");
+
+    togglePasswordButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const passwordInput = this.previousElementSibling;
+        const icon = this.querySelector("i");
+
+        if (passwordInput.type === "password") {
+          passwordInput.type = "text";
+          icon.className = "fas fa-eye-slash";
+        } else {
+          passwordInput.type = "password";
+          icon.className = "fas fa-eye";
+        }
+      });
+    });
   }
 
   // 앱 초기화
