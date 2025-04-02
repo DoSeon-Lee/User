@@ -47,7 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
     passwordStrength: document.getElementById("password-strength"),
     usersList: document.getElementById("users-list"),
     userSearch: document.getElementById("user-search"),
-    paginationControls: document.getElementById("pagination-controls"),
+    pagination: {
+      prevButton: document.getElementById("prev-page"),
+      nextButton: document.getElementById("next-page"),
+      pageInfo: document.getElementById("page-info"),
+    },
     messageContainer: document.getElementById("message-container"),
     avatarPreview: document.getElementById("avatar-preview"),
   };
@@ -292,11 +296,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (!response.ok) {
+        console.error(
+          `API Error (${endpoint}):`,
+          result.error || "Unknown error"
+        );
         throw new Error(result.error || "Something went wrong");
       }
 
       return { success: true, data: result };
     } catch (error) {
+      console.error(`API Error (${endpoint}):`, error.message);
       return { success: false, error: error.message };
     }
   }
@@ -394,16 +403,20 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadUsers(page = 1, search = "") {
     if (!state.isLoggedIn) return;
 
-    const endpoint = `users?page=${page}&limit=10${
-      search ? `&search=${encodeURIComponent(search)}` : ""
-    }`;
-    const result = await api(endpoint);
+    try {
+      const endpoint = `users?page=${page}&limit=10${
+        search ? `&search=${encodeURIComponent(search)}` : ""
+      }`;
+      const result = await api(endpoint);
 
-    if (result.success) {
-      state.usersData = result.data;
-      renderUsers();
-    } else {
-      showMessage(result.error, "error");
+      if (result.success) {
+        state.usersData = result.data;
+        renderUsers();
+      } else {
+        showMessage(result.error, "error");
+      }
+    } catch (error) {
+      showMessage("An error occurred while fetching users.", "error");
     }
   }
 
@@ -414,7 +427,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 목록 초기화
     ui.usersList.innerHTML = "";
 
-    if (state.usersData.users.length === 0) {
+    if (!state.usersData.users || state.usersData.users.length === 0) {
       ui.usersList.innerHTML = '<div class="empty-state">No users found</div>';
       return;
     }
@@ -436,9 +449,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <h3>${user.username}</h3>
           <p>${user.full_name || ""}</p>
           <p>${user.email}</p>
-          <p class="user-joined">Joined: ${new Date(
+          <p class="user-joined">Joined: ${
             user.created_at
-          ).toLocaleDateString()}</p>
+              ? new Date(user.created_at).toLocaleDateString()
+              : "Unknown"
+          }</p>
         </div>
       `;
 
@@ -449,42 +464,29 @@ document.addEventListener("DOMContentLoaded", () => {
     renderPagination();
   }
 
-  // 페이지네이션 렌더링
+  // 페이지네이션
   function renderPagination() {
-    if (!ui.paginationControls) return;
+    const { prevButton, nextButton, pageInfo } = ui.pagination;
+    if (!prevButton || !nextButton || !pageInfo) return;
 
     const { page, totalPages } = state.usersData.pagination;
 
-    // 컨트롤 초기화
-    ui.paginationControls.innerHTML = "";
-
-    if (totalPages <= 1) return;
-
-    // 이전 버튼
-    const prevButton = document.createElement("button");
-    prevButton.innerHTML = "&laquo; Prev";
+    // 이전 버튼 상태 업데이트
     prevButton.disabled = page <= 1;
-    prevButton.addEventListener("click", () => {
-      if (page > 1) loadUsers(page - 1, ui.userSearch.value);
-    });
+    prevButton.onclick = () => {
+      if (page > 1)
+        loadUsers(page - 1, ui.userSearch ? ui.userSearch.value : "");
+    };
 
-    // 다음 버튼
-    const nextButton = document.createElement("button");
-    nextButton.innerHTML = "Next &raquo;";
+    // 다음 버튼 상태 업데이트
     nextButton.disabled = page >= totalPages;
-    nextButton.addEventListener("click", () => {
-      if (page < totalPages) loadUsers(page + 1, ui.userSearch.value);
-    });
+    nextButton.onclick = () => {
+      if (page < totalPages)
+        loadUsers(page + 1, ui.userSearch ? ui.userSearch.value : "");
+    };
 
-    // 페이지 정보
-    const pageInfo = document.createElement("span");
-    pageInfo.className = "page-info";
+    // 페이지 정보 업데이트
     pageInfo.textContent = `Page ${page} of ${totalPages}`;
-
-    // 페이지네이션에 추가
-    ui.paginationControls.appendChild(prevButton);
-    ui.paginationControls.appendChild(pageInfo);
-    ui.paginationControls.appendChild(nextButton);
   }
 
   // 이벤트 리스너 설정
@@ -722,6 +724,10 @@ document.addEventListener("DOMContentLoaded", () => {
     initTheme();
     checkLoginStatus();
     setupEventListeners();
+
+    // 모든 페이지네이션 버튼 초기화
+    renderPagination();
+
     showSection("home");
   }
 
