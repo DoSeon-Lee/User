@@ -266,8 +266,4 @@ user_registration_app/
 
 ## 제작자
 
-- 홍길동 - [github.com/username](https://github.com/username)
-
-## 감사의 말
-
-- 이 프로젝트는 한컴 아카데미의 지원으로 개발되었습니다.
+- 이도선 - [github.com/DoSeon-Lee](https://github.com/DoSeon-Lee)
